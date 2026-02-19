@@ -64,29 +64,27 @@ const App: React.FC = () => {
     }
   
     try {
-      // Updated configuration with proper MIME types
+      // HTTPS PROTOCOL - Most reliable for Vercel
       const config = {
         recognitionParams: {
           type: activeMode,
-          protocol: 'WEBSOCKET',
+          protocol: 'HTTPS',  // Use HTTPS instead of WebSocket
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
             host: 'cloud.myscript.com',
-            scheme: 'wss',
+            scheme: 'https',
             port: 443
           },
           iink: {
-            recognition: {
-              text: {
-                mimeTypes: ['text/plain']
-              },
-              math: {
-                mimeTypes: ['application/x-latex']
-              },
-              diagram: {
-                mimeTypes: ['application/vnd.myscript.jiix']
-              }
+            text: {
+              mimeTypes: ['text/plain']
+            },
+            math: {
+              mimeTypes: ['application/x-latex']
+            },
+            diagram: {
+              mimeTypes: ['application/vnd.myscript.jiix']
             },
             export: {
               jiix: {
@@ -100,13 +98,13 @@ const App: React.FC = () => {
         }
       };
   
-      console.log('Initializing with config:', config);
+      console.log('Initializing with HTTPS config:', config);
   
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
       
       // Set up success handler
-      setTimeout(() => {
+      const successTimeout = setTimeout(() => {
         if (editorInstance.current) {
           try {
             editorInstance.current.tool = activeTool;
@@ -114,11 +112,14 @@ const App: React.FC = () => {
             setStatus(`Ready — ${activeMode} mode`);
             setLoading(false);
             retryCount.current = 0;
+            console.log('✅ Editor initialized successfully with HTTPS');
           } catch (e) {
             console.log('Tool set error:', e);
           }
         }
-      }, 1000);
+      }, 1500);
+  
+      return () => clearTimeout(successTimeout);
   
     } catch (err) {
       console.error('Init error:', err);
