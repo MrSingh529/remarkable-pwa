@@ -38,22 +38,15 @@ const App: React.FC = () => {
     }
   
     try {
-      const isVercel = window.location.hostname.includes('vercel.app');
-      
-      // Fix: Use the correct configuration to force secure WebSocket
+      // Option 1: Use HTTPS (preferred)
       const config = {
         recognitionParams: {
           type: activeMode,
-          protocol: 'WEBSOCKET',
+          protocol: 'HTTPS', // Changed from WEBSOCKET to HTTPS
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
-            scheme: 'wss', // Force secure WebSocket
             host: 'cloud.myscript.com',
-            port: 443,
-            websocket: {
-              url: 'wss://cloud.myscript.com/api/v4.0/iink/document'
-            }
           },
           iink: {
             export: {
@@ -91,14 +84,68 @@ const App: React.FC = () => {
   
     } catch (err) {
       console.error('Init error:', err);
-      setConnectionError('Failed to initialize. Check your internet connection.');
-      setStatus('Error loading editor');
-      setLoading(false);
       
-      // Retry initialization
-      if (retryCount.current < 3) {
-        retryCount.current++;
-        setTimeout(initEditor, 2000 * retryCount.current);
+      // Option 2: Try with WebSocket hack as fallback
+      try {
+        console.log('Trying WebSocket with wss:// hack...');
+        
+        // Hack to force wss://
+        const originalWebSocket = window.WebSocket;
+        window.WebSocket = function(url: string, protocols?: string | string[]) {
+          if (url.includes('cloud.myscript.com') && url.startsWith('ws://')) {
+            url = url.replace('ws://', 'wss://');
+          }
+          return new originalWebSocket(url, protocols);
+        } as any;
+        
+        const wsConfig = {
+          recognitionParams: {
+            type: activeMode,
+            protocol: 'WEBSOCKET',
+            server: {
+              applicationKey: MYSCRIPT_APP_KEY,
+              hmacKey: MYSCRIPT_HMAC_KEY,
+              host: 'cloud.myscript.com',
+              scheme: 'wss',
+            },
+            iink: {
+              export: {
+                jiix: {
+                  strokes: true,
+                  text: true,
+                  math: true,
+                  diagram: true
+                }
+              }
+            }
+          }
+        };
+        
+        editorInstance.current = iink.register(editorRef.current, wsConfig);
+        
+        setTimeout(() => {
+          if (editorInstance.current) {
+            try {
+              editorInstance.current.tool = activeTool;
+            } catch (e) {}
+          }
+        }, 100);
+        
+        setConnectionError(null);
+        setStatus(`Ready — ${activeMode} mode (wss)`);
+        setLoading(false);
+        retryCount.current = 0;
+        
+      } catch (fallbackErr) {
+        console.error('Both init attempts failed:', fallbackErr);
+        setConnectionError('Failed to initialize. Check your internet connection.');
+        setStatus('Error loading editor');
+        setLoading(false);
+        
+        if (retryCount.current < 3) {
+          retryCount.current++;
+          setTimeout(initEditor, 2000 * retryCount.current);
+        }
       }
     }
   }, [activeMode, activeTool]);
