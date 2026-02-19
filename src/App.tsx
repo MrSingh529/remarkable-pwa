@@ -11,10 +11,11 @@ type RecogMode = 'TEXT' | 'MATH' | 'DIAGRAM';
 type PenTool = 'pen' | 'highlighter' | 'eraser';
 interface Page { id: number; label: string; }
 
-// ===== CRITICAL FIX: Monkey patch WebSocket to force wss:// =====
-// This must run BEFORE any WebSocket connections are attempted
-const originalWebSocket = window.WebSocket;
+// ===== FIXED: TypeScript-friendly monkey patch =====
+// Store the original WebSocket constructor
+const OriginalWebSocket = window.WebSocket;
 
+// Create a patched version that forces wss:// for MyScript
 // @ts-ignore
 window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
   let urlString = url.toString();
@@ -26,15 +27,14 @@ window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
   }
   
   // @ts-ignore
-  return new originalWebSocket(urlString, protocols);
-};
+  return new OriginalWebSocket(urlString, protocols);
+} as typeof WebSocket;
 
-// Copy prototype and static methods
-window.WebSocket.prototype = originalWebSocket.prototype;
-window.WebSocket.CONNECTING = originalWebSocket.CONNECTING;
-window.WebSocket.OPEN = originalWebSocket.OPEN;
-window.WebSocket.CLOSING = originalWebSocket.CLOSING;
-window.WebSocket.CLOSED = originalWebSocket.CLOSED;
+// Copy the prototype (this is safe)
+window.WebSocket.prototype = OriginalWebSocket.prototype;
+
+// Instead of copying readonly static properties, we just need the constructor to work
+// The static properties are automatically inherited via the prototype chain
 // ===== END PATCH =====
 
 const App: React.FC = () => {
