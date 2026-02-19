@@ -40,7 +40,7 @@ const App: React.FC = () => {
     try {
       const isVercel = window.location.hostname.includes('vercel.app');
       
-      // Fix: Use the correct configuration format for iink-js
+      // Fix: Use the correct configuration to force secure WebSocket
       const config = {
         recognitionParams: {
           type: activeMode,
@@ -48,10 +48,12 @@ const App: React.FC = () => {
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
-            // Add these required fields
-            scheme: 'wss',
+            scheme: 'wss', // Force secure WebSocket
             host: 'cloud.myscript.com',
-            port: 443
+            port: 443,
+            websocket: {
+              url: 'wss://cloud.myscript.com/api/v4.0/iink/document'
+            }
           },
           iink: {
             export: {
@@ -66,7 +68,7 @@ const App: React.FC = () => {
         }
       };
   
-      console.log('Initializing with config:', config); // Debug log
+      console.log('Initializing with config:', config);
   
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
