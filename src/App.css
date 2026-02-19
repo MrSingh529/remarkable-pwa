@@ -1,9 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
+  --ms-color: #1a1a1a;
   --bg-color: #f5f5f0;
   --toolbar-bg: #ffffff;
-  --sidebar-bg: #f0efe9;
   --border-color: #e0e0da;
   --text-primary: #1a1a1a;
   --text-secondary: #888888;
@@ -11,9 +11,7 @@
   --btn-bg: #efefef;
   --btn-hover: #e2e2e2;
   --editor-bg: #fafaf8;
-  --accent-blue: #2563eb;
-  --accent-green: #16a34a;
-  --accent-purple: #7e22ce;
+  --sidebar-bg: #f0efe9;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
 }
@@ -21,14 +19,13 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background-color: var(--bg-color);
   color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-/* ─── LAYOUT ─────────────────────────────────────────── */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -42,7 +39,7 @@ body {
   overflow: hidden;
 }
 
-/* ─── SIDEBAR ────────────────────────────────────────── */
+/* ── SIDEBAR ── */
 .sidebar {
   width: 220px;
   background-color: var(--sidebar-bg);
@@ -52,7 +49,7 @@ body {
   padding: 12px 8px;
   gap: 4px;
   overflow-y: auto;
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, padding 0.2s ease;
 }
 
 .sidebar.collapsed {
@@ -68,6 +65,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 4px 8px 8px;
+  white-space: nowrap;
 }
 
 .page-item {
@@ -81,6 +79,7 @@ body {
   color: var(--text-primary);
   transition: background 0.15s;
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .page-item:hover {
@@ -95,13 +94,12 @@ body {
 }
 
 .page-item-icon {
-  font-size: 16px;
+  font-size: 15px;
   flex-shrink: 0;
 }
 
 .page-item-label {
   flex: 1;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -114,7 +112,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--accent-blue);
+  color: #2563eb;
   border: 1px dashed #93c5fd;
   background: transparent;
   margin-top: 4px;
@@ -122,13 +120,14 @@ body {
   font-family: 'Inter', sans-serif;
   font-weight: 500;
   width: 100%;
+  white-space: nowrap;
 }
 
 .add-page-btn:hover {
   background: #eff6ff;
 }
 
-/* ─── TOOLBAR ────────────────────────────────────────── */
+/* ── TOOLBAR ── */
 .toolbar {
   display: flex;
   align-items: center;
@@ -151,10 +150,10 @@ body {
   width: 1px;
   height: 24px;
   background: var(--border-color);
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
-/* ─── BUTTONS ────────────────────────────────────────── */
+/* ── BUTTONS ── */
 .btn {
   display: flex;
   align-items: center;
@@ -181,20 +180,15 @@ body {
   transform: scale(0.96);
 }
 
-/* Icon-only button */
 .btn-icon {
   padding: 7px 9px;
 }
 
-/* Mode buttons */
 .btn.active-text    { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
 .btn.active-math    { background: #dcfce7; color: #15803d; border-color: #86efac; }
 .btn.active-diagram { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+.btn.active-tool    { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }
 
-/* Tool buttons */
-.btn.active-tool { background: #1a1a1a; color: #ffffff; border-color: #1a1a1a; }
-
-/* Clear button */
 .btn-clear {
   background: #fff1f2;
   color: #e11d48;
@@ -205,7 +199,7 @@ body {
   border-color: #fda4af;
 }
 
-/* ─── STATUS ─────────────────────────────────────────── */
+/* ── STATUS ── */
 .status-text {
   font-family: monospace;
   font-size: 11px;
@@ -217,13 +211,12 @@ body {
   white-space: nowrap;
 }
 
-/* ─── EDITOR AREA ────────────────────────────────────── */
+/* ── EDITOR ── */
 .editor-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--editor-bg);
 }
 
 .editor-container {
@@ -240,7 +233,6 @@ body {
   overflow: hidden;
 }
 
-/* Page number indicator */
 .page-indicator {
   text-align: center;
   padding: 6px;
@@ -264,7 +256,7 @@ body {
   display: block;
 }
 
-/* ─── ZOOM CONTROLS ──────────────────────────────────── */
+/* ── ZOOM ── */
 .zoom-controls {
   position: absolute;
   bottom: 20px;
@@ -283,7 +275,6 @@ body {
   background: white;
   box-shadow: var(--shadow-md);
   cursor: pointer;
-  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -307,11 +298,11 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* ─── LOADING OVERLAY ────────────────────────────────── */
+/* ── LOADING ── */
 .loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(250, 250, 248, 0.9);
+  background: rgba(250, 250, 248, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -329,12 +320,12 @@ body {
   50%       { opacity: 1; }
 }
 
-/* ─── MOBILE ─────────────────────────────────────────── */
+/* ── MOBILE ── */
 @media (max-width: 600px) {
-  .btn span      { display: none; }
-  .status-text   { display: none; }
-  .sidebar       { width: 180px; }
-  .toolbar       { padding: 8px 10px; }
+  .btn span    { display: none; }
+  .status-text { display: none; }
+  .sidebar     { width: 180px; }
+  .toolbar     { padding: 8px 10px; }
 }
 
 @media (max-width: 400px) {
