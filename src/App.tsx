@@ -11,6 +11,32 @@ type RecogMode = 'TEXT' | 'MATH' | 'DIAGRAM';
 type PenTool = 'pen' | 'highlighter' | 'eraser';
 interface Page { id: number; label: string; }
 
+// ===== CRITICAL FIX: Monkey patch WebSocket to force wss:// =====
+// This must run BEFORE any WebSocket connections are attempted
+const originalWebSocket = window.WebSocket;
+
+// @ts-ignore
+window.WebSocket = function(url: string | URL, protocols?: string | string[]) {
+  let urlString = url.toString();
+  
+  // Force wss:// for myscript.com connections
+  if (urlString.includes('cloud.myscript.com') && urlString.startsWith('ws://')) {
+    urlString = urlString.replace('ws://', 'wss://');
+    console.log('🔧 Patched WebSocket URL to use wss:', urlString);
+  }
+  
+  // @ts-ignore
+  return new originalWebSocket(urlString, protocols);
+};
+
+// Copy prototype and static methods
+window.WebSocket.prototype = originalWebSocket.prototype;
+window.WebSocket.CONNECTING = originalWebSocket.CONNECTING;
+window.WebSocket.OPEN = originalWebSocket.OPEN;
+window.WebSocket.CLOSING = originalWebSocket.CLOSING;
+window.WebSocket.CLOSED = originalWebSocket.CLOSED;
+// ===== END PATCH =====
+
 const App: React.FC = () => {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorInstance = useRef<any>(null);
@@ -38,7 +64,7 @@ const App: React.FC = () => {
     }
 
     try {
-      // Correct configuration for MyScript iink-js
+      // Simple configuration - let the patch handle the protocol
       const config = {
         recognitionParams: {
           type: activeMode,
@@ -46,9 +72,7 @@ const App: React.FC = () => {
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
-            host: 'cloud.myscript.com',
-            scheme: 'wss',  // Force secure WebSocket
-            port: 443
+            host: 'cloud.myscript.com'
           },
           iink: {
             export: {
@@ -68,34 +92,18 @@ const App: React.FC = () => {
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
       
-      // Set up event listeners after a short delay
+      // Set initial tool
       setTimeout(() => {
         if (editorInstance.current) {
           try {
-            // Set initial tool
             editorInstance.current.tool = activeTool;
-            
-            // Try to add event listeners if supported
-            if (editorInstance.current.addEventListener) {
-              editorInstance.current.addEventListener('connected', () => {
-                console.log('Connected to MyScript');
-                setConnectionError(null);
-                setStatus('Ready');
-                setLoading(false);
-              });
-              
-              editorInstance.current.addEventListener('error', (error: any) => {
-                console.error('MyScript error:', error);
-                setConnectionError('Connection issue');
-              });
-            }
           } catch (e) {
-            console.log('Post-init setup error:', e);
+            console.log('Tool set error:', e);
           }
         }
       }, 100);
 
-      // Assume connected after a short delay
+      // Assume connected after a delay
       setTimeout(() => {
         setConnectionError(null);
         setStatus(`Ready — ${activeMode} mode`);
