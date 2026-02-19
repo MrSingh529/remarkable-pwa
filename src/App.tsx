@@ -62,9 +62,9 @@ const App: React.FC = () => {
       try { editorInstance.current.close(); } catch (_) {}
       editorInstance.current = null;
     }
-
+  
     try {
-      // Simple configuration - let the patch handle the protocol
+      // Updated configuration with proper MIME types
       const config = {
         recognitionParams: {
           type: activeMode,
@@ -72,9 +72,22 @@ const App: React.FC = () => {
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
-            host: 'cloud.myscript.com'
+            host: 'cloud.myscript.com',
+            scheme: 'wss',
+            port: 443
           },
           iink: {
+            recognition: {
+              text: {
+                mimeTypes: ['text/plain']
+              },
+              math: {
+                mimeTypes: ['application/x-latex']
+              },
+              diagram: {
+                mimeTypes: ['application/vnd.myscript.jiix']
+              }
+            },
             export: {
               jiix: {
                 strokes: true,
@@ -86,31 +99,27 @@ const App: React.FC = () => {
           }
         }
       };
-
+  
       console.log('Initializing with config:', config);
-
+  
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
       
-      // Set initial tool
+      // Set up success handler
       setTimeout(() => {
         if (editorInstance.current) {
           try {
             editorInstance.current.tool = activeTool;
+            setConnectionError(null);
+            setStatus(`Ready — ${activeMode} mode`);
+            setLoading(false);
+            retryCount.current = 0;
           } catch (e) {
             console.log('Tool set error:', e);
           }
         }
-      }, 100);
-
-      // Assume connected after a delay
-      setTimeout(() => {
-        setConnectionError(null);
-        setStatus(`Ready — ${activeMode} mode`);
-        setLoading(false);
-        retryCount.current = 0;
-      }, 2000);
-
+      }, 1000);
+  
     } catch (err) {
       console.error('Init error:', err);
       setConnectionError('Failed to initialize. Check your internet connection.');
