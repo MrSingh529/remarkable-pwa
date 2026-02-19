@@ -39,7 +39,8 @@ body {
   overflow: hidden;
 }
 
-/* SIDEBAR */
+/* ================= SIDEBAR ================= */
+
 .sidebar {
   width: 200px;
   min-width: 200px;
@@ -122,7 +123,8 @@ body {
 
 .add-page-btn:hover { background: #eff6ff; }
 
-/* TOOLBAR */
+/* ================= TOOLBAR ================= */
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -152,7 +154,8 @@ body {
   flex-shrink: 0;
 }
 
-/* BUTTONS */
+/* ================= BUTTONS ================= */
+
 .btn {
   display: flex;
   align-items: center;
@@ -190,12 +193,14 @@ body {
   color: #e11d48;
   border-color: #fecdd3;
 }
+
 .btn-clear:hover {
   background: #ffe4e6;
   border-color: #fda4af;
 }
 
-/* STATUS */
+/* ================= STATUS ================= */
+
 .status-text {
   font-family: monospace;
   font-size: 11px;
@@ -208,7 +213,8 @@ body {
   flex-shrink: 0;
 }
 
-/* EDITOR */
+/* ================= EDITOR ================= */
+
 .editor-wrapper {
   flex: 1;
   display: flex;
@@ -220,15 +226,11 @@ body {
 .editor-container {
   flex: 1;
   position: relative;
-  background-color: var(--editor-bg);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 31px,
-    #deded8 31px,
-    #deded8 32px
-  );
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
   overflow: hidden;
+  background: white;
 }
 
 .page-indicator {
@@ -244,6 +246,8 @@ body {
 .ms-editor-div {
   width: 100%;
   height: 100%;
+  min-height: 500px;
+  background: white;
   touch-action: none;
 }
 
@@ -255,7 +259,8 @@ body {
   display: block;
 }
 
-/* ZOOM */
+/* ================= ZOOM ================= */
+
 .zoom-controls {
   position: absolute;
   bottom: 16px;
@@ -295,33 +300,63 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* LOADING */
-.loading-overlay {
+/* ================= LOADING & ERROR ================= */
+
+.loading-overlay,
+.error-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(250, 250, 248, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 100;
+  pointer-events: none;
 }
 
-.loading-text {
-  font-size: 15px;
-  color: var(--text-muted);
-  animation: pulse 1.5s infinite;
+.error-overlay {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.98);
 }
+
+.loading-text,
+.error-text {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 16px;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.error-text { color: #ff3b30; }
+
+.retry-btn {
+  padding: 10px 20px;
+  background: #007aff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.retry-btn:hover { background: #0056b3; }
+.retry-btn:active { transform: scale(0.98); }
 
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
-  50%       { opacity: 1; }
+  50% { opacity: 1; }
 }
 
-/* MOBILE */
+/* ================= MOBILE ================= */
+
 @media (max-width: 768px) {
-  .btn span    { display: none; }
+  .btn span { display: none; }
   .status-text { display: none; }
-  .sidebar     { width: 160px; min-width: 160px; }
+  .sidebar { width: 160px; min-width: 160px; }
 }
 
 @media (max-width: 480px) {
@@ -329,65 +364,19 @@ body {
   .toolbar { padding: 6px 8px; }
 }
 
-/* Add these styles for error handling */
-.error-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  backdrop-filter: blur(4px);
-}
+/* ================= DARK MODE ================= */
 
-.error-text {
-  color: #ff6b6b;
-  margin-bottom: 16px;
-  font-size: 14px;
-  text-align: center;
-  padding: 0 20px;
-}
-
-.retry-btn {
-  padding: 8px 16px;
-  background: #007aff;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.retry-btn:hover {
-  background: #0056b3;
-}
-
-/* Ensure editor container has relative positioning for overlays */
-.editor-container {
-  position: relative;
-  height: 100%;
-  overflow: hidden;
-}
-
-.ms-editor-div {
-  width: 100%;
-  height: 100%;
-  background: white;
-}
-
-/* Dark mode support */
 @media (prefers-color-scheme: dark) {
+  .editor-container,
+  .ms-editor-div {
+    background: #1c1c1e;
+  }
+
+  .loading-overlay,
   .error-overlay {
-    background: rgba(28, 28, 30, 0.9);
+    background: rgba(28, 28, 30, 0.95);
   }
-  
-  .error-text {
-    color: #ff9999;
-  }
+
+  .loading-text { color: #ffffff; }
+  .error-text { color: #ff6b6b; }
 }

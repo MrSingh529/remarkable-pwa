@@ -33,32 +33,37 @@ const App: React.FC = () => {
     }
     
     if (editorInstance.current) {
-      try { editorInstance.current.close(); } catch (_) {}
+      try { 
+        // Check if dispose method exists (common in iink-js)
+        if (editorInstance.current.dispose) {
+          editorInstance.current.dispose();
+        } else if (editorInstance.current.close) {
+          editorInstance.current.close();
+        }
+      } catch (_) {}
       editorInstance.current = null;
     }
 
     try {
-      // IMPORTANT: Use HTTPS instead of WebSocket for Vercel deployment
       const isVercel = window.location.hostname.includes('vercel.app');
       
-      editorInstance.current = iink.register(editorRef.current, {
+      // Basic configuration without event listeners
+      const config = {
         recognitionParams: {
           type: activeMode,
-          // Use HTTPS polling instead of WebSocket for better compatibility
-          protocol: isVercel ? 'HTTPS' : 'WEBSOCKET',
+          protocol: 'WEBSOCKET', // Keep WebSocket but we'll handle errors differently
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
-            // Add custom endpoints if needed
             host: 'cloud.myscript.com',
-            protocol: 'https'
+            protocol: 'wss' // Use secure WebSocket
           },
           iink: {
             math: {
               mimeTypes: ['application/vnd.myscript.jiix']
             },
             text: {
-              mimeTypes: ['application/vnd.myscript.jiix']
+              mimeTypes: ['application/vnd.myscript.jiix', 'text/plain']
             },
             diagram: {
               mimeTypes: ['application/vnd.myscript.jiix']
@@ -72,46 +77,33 @@ const App: React.FC = () => {
               } 
             }
           },
-          // Add timeout settings
-          timeout: 30000,
-          retry: {
-            maxAttempts: 3,
-            delay: 1000
+          timeout: 30000
+        }
+      };
+
+      // Register the editor
+      editorInstance.current = iink.register(editorRef.current, config);
+      
+      // Set initial tool
+      setTimeout(() => {
+        if (editorInstance.current) {
+          try {
+            editorInstance.current.tool = activeTool;
+          } catch (e) {
+            console.log('Tool set error:', e);
           }
         }
-      });
+      }, 100);
 
-      // Add event listeners for connection status
-      editorInstance.current.addEventListener('connected', () => {
-        setConnectionError(null);
-        setStatus('Ready — write something!');
-        setLoading(false);
-        retryCount.current = 0;
-      });
-
-      editorInstance.current.addEventListener('error', (error: any) => {
-        console.error('MyScript error:', error);
-        setConnectionError('Connection lost. Attempting to reconnect...');
-        setStatus('Connection issue');
-      });
-
-      editorInstance.current.addEventListener('closed', () => {
-        setConnectionError('Connection closed. Reconnecting...');
-        // Attempt to reconnect
-        setTimeout(() => {
-          if (editorInstance.current) {
-            try {
-              editorInstance.current.reconnect?.();
-            } catch (e) {
-              console.log('Reconnection failed, will retry');
-            }
-          }
-        }, 2000);
-      });
+      // Success - assume connected (iink-js handles connection internally)
+      setConnectionError(null);
+      setStatus(`Ready — ${activeMode} mode`);
+      setLoading(false);
+      retryCount.current = 0;
 
     } catch (err) {
       console.error('Init error:', err);
-      setConnectionError('Failed to initialize. Retrying...');
+      setConnectionError('Failed to initialize. Check your internet connection.');
       setStatus('Error loading editor');
       setLoading(false);
       
@@ -121,10 +113,14 @@ const App: React.FC = () => {
         setTimeout(initEditor, 2000 * retryCount.current);
       }
     }
-  }, [activeMode]);
+  }, [activeMode, activeTool]);
 
   useEffect(() => {
-    const handleResize = () => editorInstance.current?.resize?.();
+    const handleResize = () => {
+      if (editorInstance.current && editorInstance.current.resize) {
+        editorInstance.current.resize();
+      }
+    };
     
     // Add small delay to ensure DOM is ready
     const timer = setTimeout(() => {
@@ -138,31 +134,46 @@ const App: React.FC = () => {
       window.removeEventListener('resize', handleResize);
       if (editorInstance.current) {
         try { 
-          editorInstance.current.close(); 
+          if (editorInstance.current.dispose) {
+            editorInstance.current.dispose();
+          } else if (editorInstance.current.close) {
+            editorInstance.current.close();
+          }
         } catch (_) {}
         editorInstance.current = null;
       }
     };
   }, [initEditor]);
 
+  // Handle mode changes
   useEffect(() => {
-    if (editorInstance.current?.configuration) {
+    if (editorInstance.current) {
       try {
-        const newConfig = { ...editorInstance.current.configuration };
-        newConfig.recognitionParams.type = activeMode;
-        editorInstance.current.configuration = newConfig;
+        // Try to update configuration if the API supports it
+        if (editorInstance.current.setRecognitionType) {
+          editorInstance.current.setRecognitionType(activeMode);
+        }
         setStatus(`Mode: ${activeMode}`);
       } catch (e) {
-        console.log('Mode change error:', e);
+        console.log('Mode change error - may need reinit:', e);
+        // If we can't change mode dynamically, reinitialize
+        if (retryCount.current < 1) {
+          setLoading(true);
+          initEditor();
+        }
       }
     }
-  }, [activeMode]);
+  }, [activeMode, initEditor]);
 
+  // Handle tool changes
   useEffect(() => {
-    if (!editorInstance.current) return;
-    try { 
-      editorInstance.current.tool = activeTool; 
-    } catch (_) {}
+    if (editorInstance.current) {
+      try {
+        editorInstance.current.tool = activeTool;
+      } catch (e) {
+        console.log('Tool change error:', e);
+      }
+    }
   }, [activeTool]);
 
   const handleZoomIn = () => {
@@ -188,32 +199,51 @@ const App: React.FC = () => {
     setPages(prev => [...prev, { id: newId, label: `Page ${newId}` }]);
     setCurrentPage(newId);
     setTimeout(() => { 
-      editorInstance.current?.clear(); 
+      if (editorInstance.current && editorInstance.current.clear) {
+        editorInstance.current.clear(); 
+      }
       setStatus(`Page ${newId}`); 
     }, 100);
   };
 
   const switchPage = (pageId: number) => {
     setCurrentPage(pageId);
-    editorInstance.current?.clear();
+    if (editorInstance.current && editorInstance.current.clear) {
+      editorInstance.current.clear();
+    }
     setStatus(`Page ${pageId}`);
   };
 
-  const handleUndo = () => editorInstance.current?.undo();
-  const handleRedo = () => editorInstance.current?.redo();
+  const handleUndo = () => {
+    if (editorInstance.current && editorInstance.current.undo) {
+      editorInstance.current.undo();
+    }
+  };
+  
+  const handleRedo = () => {
+    if (editorInstance.current && editorInstance.current.redo) {
+      editorInstance.current.redo();
+    }
+  };
+  
   const handleClear = () => { 
-    editorInstance.current?.clear(); 
+    if (editorInstance.current && editorInstance.current.clear) {
+      editorInstance.current.clear(); 
+    }
     setStatus('Cleared'); 
   };
   
   const handleConvert = () => { 
-    editorInstance.current?.convert(); 
+    if (editorInstance.current && editorInstance.current.convert) {
+      editorInstance.current.convert(); 
+    }
     setStatus('Converting...'); 
   };
 
   const handleExport = async () => {
     if (!editorInstance.current) return;
     try {
+      // Try PNG export first
       const canvas = editorRef.current?.querySelector('canvas') as HTMLCanvasElement;
       if (canvas) {
         const link = document.createElement('a');
@@ -223,11 +253,18 @@ const App: React.FC = () => {
         setStatus('Exported PNG!');
         return;
       }
-      const result = await editorInstance.current.export_(['application/vnd.myscript.jiix']);
-      console.log(result);
-      setStatus('Exported JSON');
+      
+      // Fallback to JIIX export
+      if (editorInstance.current.export_) {
+        const result = await editorInstance.current.export_(['application/vnd.myscript.jiix']);
+        console.log('Export result:', result);
+        setStatus('Exported JSON');
+        
+        // Also save to localStorage as backup
+        localStorage.setItem(`remarkable-page-${currentPage}`, JSON.stringify(result));
+      }
     } catch (e) { 
-      console.error(e); 
+      console.error('Export error:', e); 
       setStatus('Export failed'); 
     }
   };
@@ -301,7 +338,7 @@ const App: React.FC = () => {
         {/* EDITOR */}
         <div className="editor-wrapper">
           <div className="editor-container">
-            <div ref={editorRef} className="ms-editor-div" style={{ minHeight: '500px' }} />
+            <div ref={editorRef} className="ms-editor-div" style={{ minHeight: '500px', width: '100%', height: '100%' }} />
             {loading && (
               <div className="loading-overlay">
                 <div className="loading-text">Connecting to handwriting engine...</div>
