@@ -64,41 +64,30 @@ const App: React.FC = () => {
     }
   
     try {
-      // HTTPS PROTOCOL - Most reliable for Vercel
+      // SIMPLE CONFIGURATION - Let the library handle the defaults
       const config = {
         recognitionParams: {
           type: activeMode,
-          protocol: 'HTTPS',  // Use HTTPS instead of WebSocket
+          protocol: 'WEBSOCKET',
           server: {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
             host: 'cloud.myscript.com',
-            scheme: 'https',
+            scheme: 'wss',  // Use secure WebSocket
             port: 443
           },
+          // Don't specify export format - let it use defaults
           iink: {
-            text: {
-              mimeTypes: ['text/plain']
-            },
-            math: {
-              mimeTypes: ['application/x-latex']
-            },
-            diagram: {
-              mimeTypes: ['application/vnd.myscript.jiix']
-            },
             export: {
               jiix: {
-                strokes: true,
-                text: true,
-                math: true,
-                diagram: true
+                strokes: true
               }
             }
           }
         }
       };
   
-      console.log('Initializing with HTTPS config:', config);
+      console.log('Initializing with config:', config);
   
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
@@ -112,12 +101,12 @@ const App: React.FC = () => {
             setStatus(`Ready — ${activeMode} mode`);
             setLoading(false);
             retryCount.current = 0;
-            console.log('✅ Editor initialized successfully with HTTPS');
+            console.log('✅ Editor initialized successfully');
           } catch (e) {
             console.log('Tool set error:', e);
           }
         }
-      }, 1500);
+      }, 2000);
   
       return () => clearTimeout(successTimeout);
   
