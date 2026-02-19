@@ -1,0 +1,35 @@
+{
+    "buildCommand": "npm run build",
+    "outputDirectory": "build",
+    "devCommand": "npm start",
+    "installCommand": "npm install",
+    "rewrites": [
+      {
+        "source": "/(.*)",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/(.*)",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "*"
+          },
+          {
+            "key": "Access-Control-Allow-Methods",
+            "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+          },
+          {
+            "key": "Access-Control-Allow-Headers",
+            "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+          }
+        ]
+      }
+    ],
+    "env": {
+      "REACT_APP_MYSCRIPT_KEY": "625e304c-1a74-427d-be4e-465763e7e0af",
+      "REACT_APP_MYSCRIPT_HMAC": "3e0d9a2c-8c4c-4706-ac0c-fb6b9c66bd8d"
+    }
+  }

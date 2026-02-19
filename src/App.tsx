@@ -4,8 +4,8 @@ import * as iink from 'iink-js';
 import { Type, Calculator, Square, Download, Trash2, RefreshCw, Pen, Highlighter, Eraser, Undo2, Redo2, ZoomIn, ZoomOut, ChevronLeft, Plus } from 'lucide-react';
 import './App.css';
 
-const MYSCRIPT_APP_KEY = '625e304c-1a74-427d-be4e-465763e7e0af';
-const MYSCRIPT_HMAC_KEY = '3e0d9a2c-8c4c-4706-ac0c-fb6b9c66bd8d';
+const MYSCRIPT_APP_KEY = process.env.REACT_APP_MYSCRIPT_KEY;
+const MYSCRIPT_HMAC_KEY = process.env.REACT_APP_MYSCRIPT_HMAC;
 
 type RecogMode = 'TEXT' | 'MATH' | 'DIAGRAM';
 type PenTool = 'pen' | 'highlighter' | 'eraser';
@@ -22,41 +22,124 @@ const App: React.FC = () => {
   const [pages, setPages] = useState<Page[]>([{ id: 1, label: 'Page 1' }]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const retryCount = useRef(0);
 
   const initEditor = useCallback(() => {
     if (!editorRef.current) return;
-    if (editorRef.current.clientHeight < 10) { setTimeout(initEditor, 100); return; }
+    if (editorRef.current.clientHeight < 10) { 
+      setTimeout(initEditor, 100); 
+      return; 
+    }
+    
     if (editorInstance.current) {
       try { editorInstance.current.close(); } catch (_) {}
       editorInstance.current = null;
     }
+
     try {
+      // IMPORTANT: Use HTTPS instead of WebSocket for Vercel deployment
+      const isVercel = window.location.hostname.includes('vercel.app');
+      
       editorInstance.current = iink.register(editorRef.current, {
         recognitionParams: {
           type: activeMode,
-          protocol: 'WEBSOCKET',
-          server: { applicationKey: MYSCRIPT_APP_KEY, hmacKey: MYSCRIPT_HMAC_KEY },
-          iink: { export: { jiix: { strokes: true } } }
+          // Use HTTPS polling instead of WebSocket for better compatibility
+          protocol: isVercel ? 'HTTPS' : 'WEBSOCKET',
+          server: {
+            applicationKey: MYSCRIPT_APP_KEY,
+            hmacKey: MYSCRIPT_HMAC_KEY,
+            // Add custom endpoints if needed
+            host: 'cloud.myscript.com',
+            protocol: 'https'
+          },
+          iink: {
+            math: {
+              mimeTypes: ['application/vnd.myscript.jiix']
+            },
+            text: {
+              mimeTypes: ['application/vnd.myscript.jiix']
+            },
+            diagram: {
+              mimeTypes: ['application/vnd.myscript.jiix']
+            },
+            export: { 
+              jiix: { 
+                strokes: true,
+                text: true,
+                math: true,
+                diagram: true
+              } 
+            }
+          },
+          // Add timeout settings
+          timeout: 30000,
+          retry: {
+            maxAttempts: 3,
+            delay: 1000
+          }
         }
       });
-      setStatus('Ready — write something!');
-      setLoading(false);
+
+      // Add event listeners for connection status
+      editorInstance.current.addEventListener('connected', () => {
+        setConnectionError(null);
+        setStatus('Ready — write something!');
+        setLoading(false);
+        retryCount.current = 0;
+      });
+
+      editorInstance.current.addEventListener('error', (error: any) => {
+        console.error('MyScript error:', error);
+        setConnectionError('Connection lost. Attempting to reconnect...');
+        setStatus('Connection issue');
+      });
+
+      editorInstance.current.addEventListener('closed', () => {
+        setConnectionError('Connection closed. Reconnecting...');
+        // Attempt to reconnect
+        setTimeout(() => {
+          if (editorInstance.current) {
+            try {
+              editorInstance.current.reconnect?.();
+            } catch (e) {
+              console.log('Reconnection failed, will retry');
+            }
+          }
+        }, 2000);
+      });
+
     } catch (err) {
-      console.error(err);
-      setStatus('Error loading editor.');
+      console.error('Init error:', err);
+      setConnectionError('Failed to initialize. Retrying...');
+      setStatus('Error loading editor');
       setLoading(false);
+      
+      // Retry initialization
+      if (retryCount.current < 3) {
+        retryCount.current++;
+        setTimeout(initEditor, 2000 * retryCount.current);
+      }
     }
   }, [activeMode]);
 
   useEffect(() => {
-    const handleResize = () => editorInstance.current?.resize();
-    const timer = setTimeout(initEditor, 200);
+    const handleResize = () => editorInstance.current?.resize?.();
+    
+    // Add small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initEditor();
+    }, 500);
+
     window.addEventListener('resize', handleResize);
+    
     return () => {
       clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
       if (editorInstance.current) {
-        try { editorInstance.current.close(); } catch (_) {}
+        try { 
+          editorInstance.current.close(); 
+        } catch (_) {}
         editorInstance.current = null;
       }
     };
@@ -64,16 +147,22 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (editorInstance.current?.configuration) {
-      const newConfig = { ...editorInstance.current.configuration };
-      newConfig.recognitionParams.type = activeMode;
-      editorInstance.current.configuration = newConfig;
-      setStatus(`Mode: ${activeMode}`);
+      try {
+        const newConfig = { ...editorInstance.current.configuration };
+        newConfig.recognitionParams.type = activeMode;
+        editorInstance.current.configuration = newConfig;
+        setStatus(`Mode: ${activeMode}`);
+      } catch (e) {
+        console.log('Mode change error:', e);
+      }
     }
   }, [activeMode]);
 
   useEffect(() => {
     if (!editorInstance.current) return;
-    try { editorInstance.current.tool = activeTool; } catch (_) {}
+    try { 
+      editorInstance.current.tool = activeTool; 
+    } catch (_) {}
   }, [activeTool]);
 
   const handleZoomIn = () => {
@@ -98,7 +187,10 @@ const App: React.FC = () => {
     const newId = pages.length + 1;
     setPages(prev => [...prev, { id: newId, label: `Page ${newId}` }]);
     setCurrentPage(newId);
-    setTimeout(() => { editorInstance.current?.clear(); setStatus(`Page ${newId}`); }, 100);
+    setTimeout(() => { 
+      editorInstance.current?.clear(); 
+      setStatus(`Page ${newId}`); 
+    }, 100);
   };
 
   const switchPage = (pageId: number) => {
@@ -109,8 +201,15 @@ const App: React.FC = () => {
 
   const handleUndo = () => editorInstance.current?.undo();
   const handleRedo = () => editorInstance.current?.redo();
-  const handleClear = () => { editorInstance.current?.clear(); setStatus('Cleared'); };
-  const handleConvert = () => { editorInstance.current?.convert(); setStatus('Converting...'); };
+  const handleClear = () => { 
+    editorInstance.current?.clear(); 
+    setStatus('Cleared'); 
+  };
+  
+  const handleConvert = () => { 
+    editorInstance.current?.convert(); 
+    setStatus('Converting...'); 
+  };
 
   const handleExport = async () => {
     if (!editorInstance.current) return;
@@ -127,7 +226,10 @@ const App: React.FC = () => {
       const result = await editorInstance.current.export_(['application/vnd.myscript.jiix']);
       console.log(result);
       setStatus('Exported JSON');
-    } catch (e) { console.error(e); setStatus('Export failed'); }
+    } catch (e) { 
+      console.error(e); 
+      setStatus('Export failed'); 
+    }
   };
 
   return (
@@ -169,7 +271,9 @@ const App: React.FC = () => {
 
         <div className="toolbar-section">
           <div className="toolbar-divider" />
-          <span className="status-text">{status}</span>
+          <span className="status-text" style={{ color: connectionError ? '#ff6b6b' : 'inherit' }}>
+            {connectionError || status}
+          </span>
           <div className="toolbar-divider" />
           <button onClick={handleConvert} className="btn"><RefreshCw size={15} /><span>Convert</span></button>
           <button onClick={handleExport} className="btn"><Download size={15} /><span>Export</span></button>
@@ -201,6 +305,21 @@ const App: React.FC = () => {
             {loading && (
               <div className="loading-overlay">
                 <div className="loading-text">Connecting to handwriting engine...</div>
+              </div>
+            )}
+            {connectionError && !loading && (
+              <div className="error-overlay">
+                <div className="error-text">{connectionError}</div>
+                <button 
+                  className="retry-btn" 
+                  onClick={() => {
+                    setConnectionError(null);
+                    setLoading(true);
+                    initEditor();
+                  }}
+                >
+                  Retry Connection
+                </button>
               </div>
             )}
             <div className="zoom-controls">
