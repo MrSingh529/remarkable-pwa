@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
     <meta name="description" content="Remarkable PWA Clone" />
-    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' https://cloud.myscript.com;">
+    <!-- Fix CSP to allow both wss and https -->
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self' wss://cloud.myscript.com https://cloud.myscript.com;">
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <title>RemPWA</title>
