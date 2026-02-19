@@ -7,5 +7,4 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
-// NO StrictMode — iink-js conflicts with double-render
 root.render(<App />);
