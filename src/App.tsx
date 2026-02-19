@@ -64,7 +64,7 @@ const App: React.FC = () => {
     }
   
     try {
-      // SIMPLE CONFIGURATION - Let the library handle the defaults
+      // Minimal configuration that works with iink-js v2
       const config = {
         recognitionParams: {
           type: activeMode,
@@ -73,21 +73,13 @@ const App: React.FC = () => {
             applicationKey: MYSCRIPT_APP_KEY,
             hmacKey: MYSCRIPT_HMAC_KEY,
             host: 'cloud.myscript.com',
-            scheme: 'wss',  // Use secure WebSocket
-            port: 443
+            scheme: 'wss',
           },
-          // Don't specify export format - let it use defaults
-          iink: {
-            export: {
-              jiix: {
-                strokes: true
-              }
-            }
-          }
+          // Remove all iink configuration and let it use defaults
         }
       };
   
-      console.log('Initializing with config:', config);
+      console.log('Initializing with minimal config:', config);
   
       // Register the editor
       editorInstance.current = iink.register(editorRef.current, config);
@@ -96,14 +88,20 @@ const App: React.FC = () => {
       const successTimeout = setTimeout(() => {
         if (editorInstance.current) {
           try {
-            editorInstance.current.tool = activeTool;
+            // Set tool after a short delay
+            setTimeout(() => {
+              if (editorInstance.current) {
+                editorInstance.current.tool = activeTool;
+              }
+            }, 500);
+            
             setConnectionError(null);
             setStatus(`Ready — ${activeMode} mode`);
             setLoading(false);
             retryCount.current = 0;
             console.log('✅ Editor initialized successfully');
           } catch (e) {
-            console.log('Tool set error:', e);
+            console.log('Post-init error:', e);
           }
         }
       }, 2000);
